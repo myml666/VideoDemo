@@ -20,7 +20,7 @@ class VideoCameraView : SurfaceView, SurfaceHolder.Callback, Camera.AutoFocusCal
     private var screenHeight: Int = 0//屏幕的高度
     private var screenWidth: Int = 0//屏幕的宽度
     private var isPreviewing: Boolean = false//是否在预览
-
+    var previewSize:Camera.Size? = null//设置的预览分辨率
     constructor(context: Context) : super(context){
         preDispose()
     }
@@ -40,6 +40,7 @@ class VideoCameraView : SurfaceView, SurfaceHolder.Callback, Camera.AutoFocusCal
         screenWidth = displayMetrics.heightPixels
         //判断是否支持自动对焦
         isSupportAutoFocus = context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_AUTOFOCUS)
+        //添加监听回调
         holder.addCallback(this@VideoCameraView)
         holder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS)
     }
@@ -64,14 +65,17 @@ class VideoCameraView : SurfaceView, SurfaceHolder.Callback, Camera.AutoFocusCal
     private fun setCameraParameters() {
         val parameters = mCamera!!.parameters
         val sizes = parameters.supportedPreviewSizes
-        //确定前面定义的预览宽高是camera支持的，不支持取就更大的
-        for (i in 0 .. sizes.size) {
-            if (sizes[i].width >= screenWidth && sizes[i].height >= screenHeight || i == sizes.size - 1) {
-                screenWidth = sizes[i].width
-                screenHeight = sizes[i].height
-                break
+        var temp = 10f
+        previewSize = sizes[0]//最佳分辨率(最佳的长宽比与屏幕的长宽比差值最小)
+        for (i in sizes.indices) {
+            val abs = Math.abs(sizes[i].width.toFloat() / sizes[i].height.toFloat() - screenWidth.toFloat() / screenHeight.toFloat())
+            if(temp>abs){
+                temp = abs
+                previewSize = sizes[i]
             }
         }
+        //设置最终确定的预览大小
+        parameters.setPreviewSize(previewSize!!.width, previewSize!!.height)
         //设置最终确定的预览大小
         parameters.setPreviewSize(screenWidth, screenHeight)
         mCamera!!.parameters = parameters
